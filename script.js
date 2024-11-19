@@ -1,21 +1,28 @@
-//// RECOGE ATRIBUTOS Y METODOS
-
 document.getElementById('generateBtn').addEventListener('click', function () {
     const umlInput = document.getElementById('umlInput').value;
-    const classData = extractClassesAndAttributes(umlInput);
+    const classData = extractClasses(umlInput);
 
     const classListElement = document.getElementById('classList');
     classListElement.innerHTML = '';
-    console.log(classData);
     classData.forEach(classItem => {
-        const listItem = document.createElement('li');
-        listItem.textContent = generateJavaClass(classItem.className, classItem.attributes, classItem.methods);
+        const listItem = document.createElement('li'); 
+        listItem.style.border = "3px solid #ccc"; 
+        listItem.style.margin = "10px";
+        listItem.style.padding = "10px";
+        if (classItem.type === "class") {
+            listItem.textContent = generateJavaClass(classItem.className, classItem.attributes, classItem.methods);
+        } else if (classItem.type === "enum") {
+            listItem.textContent = generateEnum(classItem.enumName, classItem.values);
+        }
+    
         classListElement.appendChild(listItem);
     });
+    
 });
 
-function extractClassesAndAttributes(umlText) {
+function extractClasses(umlText) {
     const classPattern = /class\s+([a-zA-Z0-9_]+)\s*{([^}]*)}/g;
+    const enumPattern = /enum\s+([a-zA-Z0-9_]+)\s*{([^}]*)}/g;
     let classData = [];
     let match;
 
@@ -24,11 +31,15 @@ function extractClassesAndAttributes(umlText) {
         const attributeBlock = match[2];
         const { attributes, methods } = extractAttributesAndMethods(attributeBlock, className);
         classData.push({
+            type: "class",
             className,
             attributes: attributes || [],
             methods: methods || []
         });
     }
+
+    const enums = extractEnums(umlText, enumPattern);
+    classData = classData.concat(enums);
 
     return classData;
 }
@@ -73,15 +84,7 @@ function generateJavaClass(className, attributes, methods) {
     const attributesCode = attributes
         .map(attr => `    ${translateVisibility(attr.visibility)} ${attr.type} ${attr.name};`)
         .join('\n');
-
-    const constructorParams = attributes
-        .map(attr => `${attr.type} ${attr.name}`)
-        .join(', ');
-
-    const constructorBody = attributes
-        .map(attr => `        this.${attr.name} = ${attr.name};`)
-        .join('\n');
-
+        
     const methodsCode = methods
         .map(method => `    ${translateVisibility(method.visibility)} ${method.returnType} ${method.name}(${method.parameters}) {}`)
         .join('\n');
@@ -96,6 +99,32 @@ ${methodsCode}
 }
 \n
 `.trim();
+}
+
+function generateEnum(enumName, values) {
+    return `
+public enum ${enumName} {
+    ${values}
+}
+`.trim();
+}
+
+function extractEnums(umlText, enumPattern){
+    const enums = [];
+    let match;
+    while((match = enumPattern.exec(umlText)) !== null){
+        const enumName = match[1];
+        const values = match[2];  
+        
+        enums.push({
+            type: "enum",
+            enumName,
+            values
+        });
+    }
+
+    return enums;
+
 }
 
 function translateVisibility(visibilitySymbol) {
