@@ -15,7 +15,8 @@ document.getElementById('generateBtn').addEventListener('click', function () {
                 classItem.attributes,
                 classItem.methods,
                 classItem.isAbstract,
-                classItem.extends
+                classItem.extends,
+                classItem.implements
             );
         } else if (classItem.type === "enum") {
             listItem.textContent = generateEnum(classItem.enumName, classItem.values);
@@ -27,7 +28,7 @@ document.getElementById('generateBtn').addEventListener('click', function () {
 });
 
 function extractClasses(umlText) {
-    const classPattern = /class\s+([a-zA-Z0-9_]+)(?:\s+extends\s+([a-zA-Z0-9_]+))?\s*{([^}]*)}/g;
+    const classPattern = /class\s+([a-zA-Z0-9_]+)(?:\s+extends\s+([a-zA-Z0-9_]+))?(?:\s+implements\s+([a-zA-Z0-9_,\s]+))?\s*{([^}]*)}/g;
     const enumPattern = /enum\s+([a-zA-Z0-9_]+)\s*{([^}]*)}/g;
 
     const abstractClasses = extractAbstractClasses(umlText);
@@ -37,8 +38,9 @@ function extractClasses(umlText) {
 
     while ((match = classPattern.exec(umlText)) !== null) {
         const className = match[1];
-        const parentClass = match[2] || null; 
-        const attributeBlock = match[3];
+        const parentClass = match[2] || null;
+        const Interfaces = match[3] ? match[3].split(',').map(i => i.trim()) : []; 
+        const attributeBlock = match[4];
 
         const { attributes, methods } = extractAttributesAndMethods(attributeBlock, className);
         classData.push({
@@ -46,6 +48,7 @@ function extractClasses(umlText) {
             isAbstract: !!abstractClasses[className],
             className,
             extends: parentClass,
+            implements:Interfaces,
             attributes: attributes || [],
             methods: methods || []
         });
@@ -103,9 +106,9 @@ function extractAttributesAndMethods(block, className) {
     return { attributes, methods };
 }
 
-function generateJavaClass(className, attributes, methods, isAbstract, extendsClass) {
+function generateJavaClass(className, attributes, methods, isAbstract, extendsClass, interfaces) {
 
-    const classDeclaration = `${isAbstract ? 'abstract ' : ''}class ${className}${extendsClass ? ` extends ${extendsClass}` : ''}`;
+    const classDeclaration = `${isAbstract ? 'abstract ' : ''}class ${className}${extendsClass ? ` extends ${extendsClass}` : ''}${interfaces.length ? ` implements ${interfaces.join(', ')}` : ''}`;
 
     const attributesCode = attributes
         .map(attr => `    ${translateVisibility(attr.visibility)} ${attr.type} ${attr.name};`)
@@ -285,6 +288,6 @@ function translateVisibility(visibilitySymbol) {
         case '#':
             return 'protected';
         default:
-            return 'private';
+            return '';
     }
 }
