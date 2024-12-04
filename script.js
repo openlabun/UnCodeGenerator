@@ -248,34 +248,42 @@ function extractComplexRelations(umlText){
     return complexRelations;
 }
 
-function processComplexRelations(complexRelations){
+function processComplexRelations(complexRelations) {
     const classAttFromComplexRelations = {};
 
     complexRelations.forEach(complexRelation => {
-        if(!classAttFromComplexRelations[complexRelation.from]){
-            classAttFromComplexRelations[complexRelation.from] = [];
+        if (!classAttFromComplexRelations[complexRelation.from]) {
+            classAttFromComplexRelations[complexRelation.from] = {
+                extends: null,
+                implements: []
+            };
         }
-        if(complexRelation.type === "--|>"){
-            classAttFromComplexRelations[complexRelation.from].push({
-                type: "--|>",
-                to: complexRelation.to
-            });
+        if (complexRelation.type === "--|>") {
+            classAttFromComplexRelations[complexRelation.from].extends = complexRelation.to;
+        } else if (complexRelation.type === "..|>") {
+            classAttFromComplexRelations[complexRelation.from].implements.push(complexRelation.to);
         }
-    })
+    });
+
     return classAttFromComplexRelations;
 }
 
-function assignAttrToClassesFromComplexRel(classAttFromComplexRelations,classData){
+
+function assignAttrToClassesFromComplexRel(classAttFromComplexRelations, classData) {
     classData.forEach(classItem => {
         const className = classItem.className;
-        if(classAttFromComplexRelations[className]){
-            classAttFromComplexRelations[className].forEach(rel => {
-                classItem.extends = rel.to;
-            })
+        
+        if (classAttFromComplexRelations[className]) {
+            const relations = classAttFromComplexRelations[className];
+            if (relations.extends) {
+                classItem.extends = relations.extends;
+            }
+            if (relations.implements.length > 0) {
+                classItem.implements = relations.implements;
+            }
         }
-
-    })
-    return classData
+    });
+    return classData;
 }
 
 
