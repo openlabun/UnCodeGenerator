@@ -18,25 +18,15 @@ document.getElementById('generateBtn').addEventListener('click', function () {
 });
 
 function extractClassesAndRelations(umlText) {
-    // Validar delimitadores de PlantUML
-    if (!umlText.trim().startsWith('@startuml') || !umlText.trim().endsWith('@enduml')) {
-        alert('El diagrama debe comenzar con @startuml y terminar con @enduml.');
-        return [];
-    }
-
     const classPattern = /(?:abstract\s+)?class\s+([a-zA-Z0-9_]+)(?:\s+extends\s+([a-zA-Z0-9_]+))?\s*\{([\s\S]*?)\}/g;
-    
-    // Atributos: Captura atributos tipo +int nombre, pero no captura los métodos que contienen ()
     const attributePattern = /([+|-])\s*([\w\*]+)\s+([\w]+)/g;
-
-    // Métodos: Captura métodos tipo +void hacerSonido() o +void hacerSonido(param1)
     const methodPattern = /([+|-])\s*(void|[\w]+)\s+([\w]+)\(\s*\)/g;
-
-    const relationPattern = /([a-zA-Z0-9_]+)\s*(--\|>)\s*([a-zA-Z0-9_]+)/g; // Solo herencia '--|>'
+    const relationPattern = /([a-zA-Z0-9_]+)\s*(--|<\|-|-->|\*--|\|>)\s*"?([*0-9]+)?"?\s*([a-zA-Z0-9_]+)/g;
 
     const classes = [];
     let match;
 
+    // Extraer clases
     while ((match = classPattern.exec(umlText)) !== null) {
         const className = match[1];
         const body = match[3] || '';
@@ -44,23 +34,20 @@ function extractClassesAndRelations(umlText) {
         const attributes = [];
         const methods = [];
 
-        // Extraer métodos primero (evitar que sean capturados como atributos)
+        // Extraer métodos
         let methodMatch;
         while ((methodMatch = methodPattern.exec(body)) !== null) {
             methods.push({
                 visibility: methodMatch[1] === '-' ? 'private' : 'public',
-                returnType: methodMatch[2],  // Ahora guarda 'void' o el tipo adecuado
-                name: methodMatch[3] // Nombre del método
+                returnType: methodMatch[2],
+                name: methodMatch[3]
             });
         }
 
-        // Extraer atributos después de los métodos (evitar duplicación)
+        // Extraer atributos
         let attrMatch;
         while ((attrMatch = attributePattern.exec(body)) !== null) {
-            // Si el atributo es un método (porque tiene paréntesis), lo ignoramos
-            if (body.includes(`${attrMatch[3]}()`)) continue; // Ignorar los que ya son métodos
-
-            const type = attrMatch[2].includes('*') ? attrMatch[2].replace('*', '[]') : attrMatch[2];  // Convertir '*' a '[]'
+            const type = attrMatch[2].includes('*') ? attrMatch[2].replace('*', '[]') : attrMatch[2];
             attributes.push({
                 visibility: attrMatch[1] === '-' ? 'private' : 'public',
                 name: attrMatch[3],
@@ -71,23 +58,28 @@ function extractClassesAndRelations(umlText) {
         classes.push({
             className,
             isAbstract,
-            parentClass: null,  // Inicialmente no tiene clase padre
+            parentClass: null,
             attributes,
             methods
         });
     }
 
-    // Extraer relaciones de herencia '--|>'
-    const relations = [];
+    // Extraer relaciones
     let relationMatch;
     while ((relationMatch = relationPattern.exec(umlText)) !== null) {
-        const childClass = relationMatch[1];
-        const parentClass = relationMatch[3];
+        const classA = relationMatch[1];
+        const classB = relationMatch[4];
+        const cardinality = relationMatch[3];
 
-        // Asignar la clase padre a la clase hija correspondiente
-        const classData = classes.find(cls => cls.className === childClass);
-        if (classData) {
-            classData.parentClass = parentClass;
+        if (cardinality === "*") {
+            const classData = classes.find(cls => cls.className === classA);
+            if (classData) {
+                classData.attributes.push({
+                    visibility: 'public',
+                    name: classB.toLowerCase(),
+                    type: `${classB}[]`
+                });
+            }
         }
     }
 
