@@ -50,10 +50,17 @@ function extractClasses(umlText) {
             methods: methods || []
         });
     }
+
     const relations = extractRelations(umlText);
     const processedRelations = processRelations(relations);
     const relationsInAttr = assignAttrToClassesFromRel(processedRelations,classData);
     classData = relationsInAttr;
+
+    const complexRelations = extractComplexRelations(umlText);
+    const processedComplexRelations = processComplexRelations(complexRelations);
+    const complexRelationInAttr = assignAttrToClassesFromComplexRel(processedComplexRelations,classData);
+    classData = complexRelationInAttr;
+
     const enums = extractEnums(umlText, enumPattern);
     classData = classData.concat(enums);
 
@@ -222,6 +229,50 @@ function assignAttrToClassesFromRel(classAttFromRelations, classData) {
         }
     });
     return classData;
+}
+
+function extractComplexRelations(umlText){
+    const complexRelationPattern = /(\w+)\s*(--\|>|\.\.\|>)\s*(\w+)/g;
+    const complexRelations = [];
+    let match;
+    while((match = complexRelationPattern.exec(umlText)) != null){
+         complexRelations.push({
+            from: match[1],
+            type: match[2],
+            to: match[3]
+         })
+    }
+    return complexRelations;
+}
+
+function processComplexRelations(complexRelations){
+    const classAttFromComplexRelations = {};
+
+    complexRelations.forEach(complexRelation => {
+        if(!classAttFromComplexRelations[complexRelation.from]){
+            classAttFromComplexRelations[complexRelation.from] = [];
+        }
+        if(complexRelation.type === "--|>"){
+            classAttFromComplexRelations[complexRelation.from].push({
+                type: "--|>",
+                to: complexRelation.to
+            });
+        }
+    })
+    return classAttFromComplexRelations;
+}
+
+function assignAttrToClassesFromComplexRel(classAttFromComplexRelations,classData){
+    classData.forEach(classItem => {
+        const className = classItem.className;
+        if(classAttFromComplexRelations[className]){
+            classAttFromComplexRelations[className].forEach(rel => {
+                classItem.extends = rel.to;
+            })
+        }
+
+    })
+    return classData
 }
 
 
