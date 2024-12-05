@@ -9,14 +9,15 @@ document.getElementById('generateBtn').addEventListener('click', function () {
         listItem.style.border = "3px solid #ccc"; 
         listItem.style.margin = "10px";
         listItem.style.padding = "10px";
-        if (classItem.type === "class") {
+        if (classItem.type === "class" || classItem.type === "interface") {
             listItem.textContent = generateJavaClass(
                 classItem.className,
                 classItem.attributes,
                 classItem.methods,
                 classItem.isAbstract,
                 classItem.extends,
-                classItem.implements
+                classItem.implements,
+                classItem.type
             );
         } else if (classItem.type === "enum") {
             listItem.textContent = generateEnum(classItem.enumName, classItem.values);
@@ -30,6 +31,7 @@ document.getElementById('generateBtn').addEventListener('click', function () {
 function extractClasses(umlText) {
     const classPattern = /class\s+([a-zA-Z0-9_]+)(?:\s+extends\s+([a-zA-Z0-9_]+))?(?:\s+implements\s+([a-zA-Z0-9_,\s]+))?\s*{([^}]*)}/g;
     const enumPattern = /enum\s+([a-zA-Z0-9_]+)\s*{([^}]*)}/g;
+    const interfacePattern = /interface\s+([a-zA-Z0-9_]+)\s*{([^}]*)}/g;
 
     const abstractClasses = extractAbstractClasses(umlText);
 
@@ -53,6 +55,20 @@ function extractClasses(umlText) {
             methods: methods || []
         });
     }
+
+    while ((match = interfacePattern.exec(umlText)) !== null) {
+        const interfaceName = match[1];
+        const attributeBlock = match[2];
+
+        const { attributes, methods } = extractAttributesAndMethods(attributeBlock, interfaceName);
+        classData.push({
+            type: "interface",
+            className: interfaceName,
+            attributes: attributes || [],
+            methods: methods || []
+        });
+    }
+
 
     const relations = extractRelations(umlText);
     const processedRelations = processRelations(relations);
@@ -108,9 +124,11 @@ function extractAttributesAndMethods(block, className) {
     return { attributes, methods };
 }
 
-function generateJavaClass(className, attributes, methods, isAbstract, extendsClass, interfaces) {
+function generateJavaClass(className, attributes, methods, isAbstract, extendsClass, interfaces, type) {
 
-    const classDeclaration = `${isAbstract ? 'abstract ' : ''}class ${className}${extendsClass ? ` extends ${extendsClass}` : ''}${interfaces.length ? ` implements ${interfaces.join(', ')}` : ''}`;
+    const classDeclaration = `${type === 'interface' ? 'interface' : isAbstract ? 'abstract class' : 'class'} ${className}${
+        extendsClass ? ` extends ${extendsClass}` : ''
+    }${interfaces && interfaces.length > 0 ? ` implements ${interfaces.join(', ')}` : ''}`;
 
     const attributesCode = attributes
         .map(attr => `    ${translateVisibility(attr.visibility)} ${attr.type} ${attr.name};`)
