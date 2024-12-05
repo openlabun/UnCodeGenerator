@@ -89,8 +89,8 @@ function parseUML(umlText) {
         if (line.match(/(\w+)\s+"(\d+|\*)"\s+(-->|<--|--)\s+"(\d+|\*)"\s+(\w+)/)) {
             const relationshipMatch = line.match(/(\w+)\s+"(\d+|\*)"\s+(-->|<--|--)\s+"(\d+|\*)"\s+(\w+)/);
             const [_, class1, cardinality1, direction, cardinality2, class2] = relationshipMatch;
-            const cardinality1Final = cardinality1 || "1";
-            const cardinality2Final = cardinality2 || "1";
+            const cardinality1Final = cardinality1 || '"1"';
+            const cardinality2Final = cardinality2 || '"1"';
             relationships.push({
                 class1,
                 cardinality1: cardinality1Final,
@@ -128,38 +128,37 @@ function parseUML(umlText) {
         }
     });
 
-    // Procesar relaciones
     relationships.forEach(rel => {
-    const { class1, class2, cardinality1, cardinality2, direction } = rel;
-    const class1Element = elements[class1];
-    const class2Element = elements[class2];
+        const { class1, class2, cardinality1, cardinality2, direction } = rel;
+        const class1Element = elements[class1];
+        const class2Element = elements[class2];
 
-    if (direction === '-->' || direction === '--') {
-        if (class1Element) {
-            const cardinality = cardinality2 === '*' ? '[]' : cardinality2 === '1' ? '' : '[1]';
-            if (!cardinality2) {
-                cardinality = '[]';
+        if (direction === '-->' || direction === '--') {
+            if (class1Element) {
+                const cardinality = cardinality2 === '*' ? '[]' : cardinality2 === '1' ? '' : '[1]';
+                if (!cardinality2) {
+                    cardinality = '[]';
+                }
+                class1Element.relationships.push({
+                    type: class2,
+                    cardinality: cardinality,
+                });
             }
-            class1Element.relationships.push({
-                type: class2,
-                cardinality: cardinality,
-            });
         }
-    }
 
-    if (direction === '<--' || direction === '--') {
-        if (class2Element) {
-            const cardinality = cardinality1 === '*' ? '[]' : cardinality1 === '1' ? '' : '[1]';
-            if (!cardinality1) {
-                cardinality = '[]';
+        if (direction === '<--' || direction === '--') {
+            if (class2Element) {
+                const cardinality = cardinality1 === '*' ? '[]' : cardinality1 === '1' ? '' : '[1]';
+                if (!cardinality1) {
+                    cardinality = '[]';
+                }
+                class2Element.relationships.push({
+                    type: class1,
+                    cardinality: cardinality,
+                });
             }
-            class2Element.relationships.push({
-                type: class1,
-                cardinality: cardinality,
-            });
         }
-    }
-});
+    });
 
     return Object.values(elements).map(generateJavaElement);
 }
@@ -174,7 +173,6 @@ function normalizeCardinality(cardinality) {
     }
 }
 
-// Procesar relaciones
 relationships.forEach(rel => {
     const { class1, class2, cardinality1, cardinality2, direction } = rel;
     const class1Element = elements[class1];
@@ -248,7 +246,7 @@ function generateJavaEnum(enumDef) {
     const { name, values } = enumDef;
     let code = `public enum ${name} {\n`;
 
-    // Add enum values
+
     values.forEach((value, index) => {
         code += `    ${value.toUpperCase()}${index < values.length - 1 ? ',' : ';'}\n`;
     });
