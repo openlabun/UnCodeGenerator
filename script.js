@@ -76,8 +76,9 @@ function extractAttributesAndMethods(block, className) {
     const methods = [];
 
     lines.forEach(line => {
-        if (/^([\+\-\#]?)\s*(?:void|[a-zA-Z0-9_]+)?\s*([a-zA-Z0-9_]+)\(([^)]*)\)$/.test(line)) {
-            const match = line.match(/^([\+\-\#]?)\s*(?:([a-zA-Z0-9_]+)\s+)?([a-zA-Z0-9_]+)\(([^)]*)\)$/);
+        const methodPattern = /^([\+\-\#]?)\s*(abstract\s+)?(?:([a-zA-Z0-9_]+)\s+)?([a-zA-Z0-9_]+)\(([^)]*)\)\s*;?$/;
+        if (methodPattern.test(line)) {
+            const match = line.match(methodPattern);
 
             if(match[3] == className){
                 methods.push({
@@ -89,9 +90,10 @@ function extractAttributesAndMethods(block, className) {
             } else {
             methods.push({
                 visibility: match[1] || '+',
-                returnType: match[2] || 'void',
-                name: match[3],
-                parameters: match[4] || ''
+                isAbstract: !!match[2],
+                returnType: match[3] || 'void',
+                name: match[4],
+                parameters: match[5] || ''
             });}
         } else if (/^([\+\-\#]?)\s*([a-zA-Z0-9_]+)\s+([a-zA-Z0-9_]+)$/.test(line)) {
             const match = line.match(/^([\+\-\#]?)\s*([a-zA-Z0-9_]+)\s+([a-zA-Z0-9_]+)$/); 
@@ -115,7 +117,7 @@ function generateJavaClass(className, attributes, methods, isAbstract, extendsCl
         .join('\n');
         
     const methodsCode = methods
-        .map(method => `    ${translateVisibility(method.visibility)} ${method.returnType} ${method.name}(${method.parameters}) {}`)
+        .map(method => `    ${translateVisibility(method.visibility)} ${method.isAbstract ? 'abstract ' : ''} ${method.returnType} ${method.name}(${method.parameters}) {}`)
         .join('\n');
 
         return `
