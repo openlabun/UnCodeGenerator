@@ -10,7 +10,7 @@ document.getElementById('generateBtn').addEventListener('click', function () {
         listItem.style.margin = "10px";
         listItem.style.padding = "10px";
         if (classItem.type === "class" || classItem.type === "interface") {
-            listItem.textContent = generateJavaClass(
+            listItem.innerHTML = generateJavaClass(
                 classItem.className,
                 classItem.attributes,
                 classItem.methods,
@@ -18,7 +18,7 @@ document.getElementById('generateBtn').addEventListener('click', function () {
                 classItem.extends,
                 classItem.implements,
                 classItem.type
-            );
+            ).replace(/\n/g, '<br>');            
         } else if (classItem.type === "enum") {
             listItem.textContent = generateEnum(classItem.enumName, classItem.values);
         }
@@ -137,11 +137,10 @@ function generateJavaClass(className, attributes, methods, isAbstract, extendsCl
     const methodsCode = methods
         .map(method => `    ${translateVisibility(method.visibility)} ${method.isAbstract ? 'abstract ' : ''} ${method.returnType} ${method.name}(${method.parameters}) {}`)
         .join('\n');
-
         return `
-        public ${classDeclaration} {
+        public ${classDeclaration} { 
         ${attributesCode ? `\n${attributesCode}\n` : ''}
-        ${methodsCode ? `\n${methodsCode}\n` : ''}
+        ${methodsCode ? `${methodsCode}` : ''}
         }
         `.trim();
         }
