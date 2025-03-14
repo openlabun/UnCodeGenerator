@@ -31,5 +31,5 @@ jobs:
           git status
           docker stop uncodegenerator-app
           docker rm uncodegenerator-app
-          docker build -t uncodegeneratori .
-          docker run -d -it -p 5023:80 --restart unless-stopped --name uncodegenerator-app uncodegeneratori
+          docker build -t uncodegenerator-image .
+          docker run -d -it -p 5023:80 --restart unless-stopped --name uncodegenerator uncodegenerator-image
